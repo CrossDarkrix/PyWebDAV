@@ -4,6 +4,8 @@
 </div>
 
 <h2 align="center">PyWebDAV - wsgidavを使った簡易サーバー -</h2>
+
+<h4>指定したパスでフォルダ内を共有したい時にお使いください。ポート番号は「8080」に固定しています。</h4>
 <div>
 	<h2>Build Requirement Modules</h2>
 	<ul>
