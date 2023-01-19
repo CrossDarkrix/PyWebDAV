@@ -8,6 +8,13 @@
 	<h2>Build Requirement Modules</h2>
 	<ul>
 		<li>PySide6</li><br>
+		<li>PyYaml</li><br>
+		<li>defusedxml</li><br>
+		<li>Jinja2</li><br>
+		<li>python-pam</li><br>
+		<li>MarkupSafe</li><br>
+		<li>cheroot</li><br>
+		<li>json5</li><br>
 	</ul>
 </div>
 <div>
