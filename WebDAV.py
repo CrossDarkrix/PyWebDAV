@@ -15,7 +15,6 @@ from wsgidav.fs_dav_provider import FilesystemProvider
 from wsgidav.wsgidav_app import WsgiDAVApp
 from wsgidav.xml_tools import use_lxml
 try:
-    # Try pyjson5 first because it's faster than json5
     from pyjson5 import load as json_load
 except ImportError:
     from json5 import load as json_load
@@ -32,7 +31,7 @@ from PySide6.QtWidgets import (QApplication, QLabel, QPushButton, QSizePolicy,
 
 __docformat__ = "reStructuredText"
 
-#: Try this config files if no --config=... option is specified
+
 DEFAULT_CONFIG_FILES = ("wsgidav.yaml", "wsgidav.json")
 
 _logger = logging.getLogger("wsgidav")
@@ -120,11 +119,10 @@ class WebDAV(object):
             "-p",
             "--port",
             type=int,
-            # default=8080,
             help="port to serve on (default: 8080)",
         )
         parser.add_argument(
-            "-H",  # '-h' conflicts with --help
+            "-H",
             "--host",
             help=(
                 "host to serve from (default: localhost). 'localhost' is only "
@@ -148,13 +146,11 @@ class WebDAV(object):
         parser.add_argument(
             "--server",
             choices=SUPPORTED_SERVERS.keys(),
-            # default="cheroot",
             help="type of pre-installed WSGI server to use (default: cheroot).",
         )
         parser.add_argument(
             "--ssl-adapter",
             choices=("builtin", "pyopenssl"),
-            # default="builtin",
             help="used by 'cheroot' server if SSL certificates are configured "
                  "(default: builtin).",
         )
@@ -411,8 +407,7 @@ class WebDAV(object):
             "bind_addr": (config["host"], config["port"]),
             "wsgi_app": app,
             "server_name": version,
-            # File Explorer needs lot of threads (see issue #149):
-            "numthreads": 50,  # TODO: still required?
+            "numthreads": 50,
         }
         custom_args = util.get_dict_value(config, "server_args", as_dict=True)
         server_args.update(custom_args)
@@ -490,7 +485,7 @@ class WebDAV(object):
         startup_event = config.get("startup_event")
         if startup_event:
             def _patched_start():
-                dav_server.start_accepting = org_start  # undo the monkey patch
+                dav_server.start_accepting = org_start
                 org_start()
                 _logger.info("gevent is ready")
                 startup_event.set()
@@ -618,7 +613,6 @@ class WebDAV(object):
             "interface": "wsgi",
             "host": config["host"],
             "port": config["port"],
-            # TODO: see _run_cheroot()
         }
         if info["use_ssl"]:
             server_args.update(
@@ -628,7 +622,6 @@ class WebDAV(object):
                     "ssl_ca_certs": info["ssl_chain"],
                 }
             )
-        # Override or add custom args
         custom_args = util.get_dict_value(config, "server_args", as_dict=True)
         server_args.update(custom_args)
 
@@ -749,7 +742,6 @@ class Ui_Server(object):
         self.retranslateUi(Server)
 
         QMetaObject.connectSlotsByName(Server)
-    # setupUi
 
     def ClickedEvent(self, c):
         if self.server_button.isChecked():
