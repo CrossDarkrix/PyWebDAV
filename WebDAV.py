@@ -8,26 +8,24 @@ import sys
 import webbrowser
 from pprint import pformat
 from threading import Timer
+
 import yaml
 from wsgidav import __version__, util
 from wsgidav.default_conf import DEFAULT_CONFIG, DEFAULT_VERBOSE
 from wsgidav.fs_dav_provider import FilesystemProvider
 from wsgidav.wsgidav_app import WsgiDAVApp
 from wsgidav.xml_tools import use_lxml
+
 try:
     from pyjson5 import load as json_load
 except ImportError:
     from json5 import load as json_load
 
-from PySide6.QtCore import (QCoreApplication, QByteArray, QDate, QDateTime, QLocale,
-    QMetaObject, QObject, QPoint, QRect,
-    QSize, QTime, QUrl, Qt)
-from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
-    QFont, QFontDatabase, QGradient, QIcon,
-    QImage, QKeySequence, QLinearGradient, QPainter,
-    QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QLabel, QPushButton, QSizePolicy,
-    QWidget, QLineEdit, QMainWindow)
+from PySide6.QtCore import (QByteArray, QMetaObject, QRect,
+                            QSize, Qt)
+from PySide6.QtGui import (QFont, QIcon,
+                           QImage, QPixmap)
+from PySide6.QtWidgets import (QApplication, QLabel, QPushButton, QLineEdit, QMainWindow)
 
 __docformat__ = "reStructuredText"
 
