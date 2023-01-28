@@ -5,16 +5,13 @@ import multiprocessing
 import os
 import platform
 import sys
-import webbrowser
+import yaml
 from pprint import pformat
 from threading import Timer
-
-import yaml
 from wsgidav import __version__, util
 from wsgidav.default_conf import DEFAULT_CONFIG, DEFAULT_VERBOSE
 from wsgidav.fs_dav_provider import FilesystemProvider
 from wsgidav.wsgidav_app import WsgiDAVApp
-from wsgidav.xml_tools import use_lxml
 
 try:
     from pyjson5 import load as json_load
@@ -22,18 +19,14 @@ except ImportError:
     from json5 import load as json_load
 
 from PySide6.QtCore import (QByteArray, QMetaObject, QRect,
-                            QSize, Qt)
+                            QSize, Qt, QLocale, QTranslator, QLibraryInfo)
 from PySide6.QtGui import (QFont, QIcon,
                            QImage, QPixmap)
 from PySide6.QtWidgets import (QApplication, QLabel, QPushButton, QLineEdit, QMainWindow)
 
 __docformat__ = "reStructuredText"
-
-
 DEFAULT_CONFIG_FILES = ("wsgidav.yaml", "wsgidav.json")
-
 _logger = logging.getLogger("wsgidav")
-
 
 class FullExpandedPath(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
@@ -56,7 +49,6 @@ class WebDAV(object):
             raise RuntimeError(
                 "Option 'ssl_certificate' and 'ssl_private_key' must be used together."
             )
-
         protocol = "https" if use_ssl else "http"
         url = f"{protocol}://{config['host']}:{config['port']}"
         info = {
@@ -105,7 +97,6 @@ class WebDAV(object):
             "uvicorn": self._run_uvicorn,
             "wsgiref": self._run_wsgiref,
         }
-
         parser = argparse.ArgumentParser(
             prog="wsgidav",
             description=description,
@@ -141,18 +132,6 @@ class WebDAV(object):
             help="quick configuration of a domain controller when no config file "
                  "is used",
         )
-        parser.add_argument(
-            "--server",
-            choices=SUPPORTED_SERVERS.keys(),
-            help="type of pre-installed WSGI server to use (default: cheroot).",
-        )
-        parser.add_argument(
-            "--ssl-adapter",
-            choices=("builtin", "pyopenssl"),
-            help="used by 'cheroot' server if SSL certificates are configured "
-                 "(default: builtin).",
-        )
-
         qv_group = parser.add_mutually_exclusive_group()
         qv_group.add_argument(
             "-v",
@@ -161,81 +140,10 @@ class WebDAV(object):
             default=3,
             help="increment verbosity by one (default: %(default)s, range: 0..5)",
         )
-        qv_group.add_argument(
-            "-q", "--quiet", default=0, action="count", help="decrement verbosity by one"
-        )
-
-        qv_group = parser.add_mutually_exclusive_group()
-        qv_group.add_argument(
-            "-c",
-            "--config",
-            dest="config_file",
-            action=FullExpandedPath,
-            help=(
-                f"configuration file (default: {DEFAULT_CONFIG_FILES} in current directory)"
-            ),
-        )
-
-        qv_group.add_argument(
-            "--no-config",
-            action="store_true",
-            help=f"do not try to load default {DEFAULT_CONFIG_FILES}",
-        )
-
-        parser.add_argument(
-            "--browse",
-            action="store_true",
-            help="open browser on start",
-        )
-
-        parser.add_argument(
-            "-V",
-            "--version",
-            action="store_true",
-            help="print version info and exit (may be combined with --verbose)",
-        )
-
         args = parser.parse_args()
-
-        args.verbose -= args.quiet
-        del args.quiet
-
         if args.root_path and not os.path.isdir(args.root_path):
             msg = "{} is not a directory".format(args.root_path)
             parser.error(msg)
-
-        if args.version:
-            if args.verbose >= 4:
-                version_info = "WsgiDAV/{} Python/{}({} bit) {}".format(
-                    __version__,
-                    util.PYTHON_VERSION,
-                    "64" if sys.maxsize > 2 ** 32 else "32",
-                    platform.platform(aliased=True),
-                )
-                version_info += "\nPython from: {}".format(sys.executable)
-            else:
-                version_info = "{}".format(__version__)
-            print(version_info)
-            sys.exit()
-
-        if args.no_config:
-            pass
-        elif args.config_file is None:
-            for filename in DEFAULT_CONFIG_FILES:
-                defPath = os.path.abspath(filename)
-                if os.path.exists(defPath):
-                    if args.verbose >= 3:
-                        print("Using default configuration file: {}".format(defPath))
-                    args.config_file = defPath
-                    break
-        else:
-            args.config_file = os.path.abspath(args.config_file)
-            if not os.path.isfile(args.config_file):
-                parser.error(
-                    "Could not find specified configuration file: {}".format(
-                        args.config_file
-                    )
-                )
         args.port = 8080
         args.host = '0.0.0.0'
         args.root_path = self.running_path
@@ -248,25 +156,19 @@ class WebDAV(object):
         return cmdLineOpts, parser
 
     def _read_config_file(self, config_file, _verbose):
-
         config_file = os.path.abspath(config_file)
-
         if not os.path.exists(config_file):
             raise RuntimeError(f"Couldn't open configuration file '{config_file}'.")
-
         if config_file.endswith(".json"):
             with open(config_file, mode="rt", encoding="utf-8-sig") as fp:
                 conf = json_load(fp)
-
         elif config_file.endswith(".yaml"):
             with open(config_file, mode="rt", encoding="utf-8-sig") as fp:
                 conf = yaml.safe_load(fp)
-
         else:
             raise RuntimeError(
                 f"Unsupported config file format (expected yaml or json): {config_file}"
             )
-
         conf["_config_file"] = config_file
         conf["_config_root"] = os.path.dirname(config_file)
         return conf
@@ -274,11 +176,9 @@ class WebDAV(object):
     def _init_config(self):
         cli_opts, parser = self._init_command_line_options()
         cli_verbose = cli_opts["verbose"]
-
         config = copy.deepcopy(DEFAULT_CONFIG)
         config["_config_file"] = None
         config["_config_root"] = os.getcwd()
-
         config_file = cli_opts.get("config_file")
         if config_file:
             file_opts = self._read_config_file(config_file, cli_verbose)
@@ -294,7 +194,6 @@ class WebDAV(object):
         else:
             if cli_verbose >= 2:
                 print("Running without configuration file.")
-
         if cli_opts.get("port"):
             config["port"] = cli_opts.get("port")
         if cli_opts.get("host"):
@@ -305,14 +204,11 @@ class WebDAV(object):
             config["server"] = cli_opts.get("server")
         if cli_opts.get("ssl_adapter") is not None:
             config["ssl_adapter"] = cli_opts.get("ssl_adapter")
-
         if cli_opts.get("verbose") != DEFAULT_VERBOSE:
             config["verbose"] = cli_opts.get("verbose")
-
         if cli_opts.get("root_path"):
             root_path = os.path.abspath(cli_opts.get("root_path"))
             config["provider_mapping"]["/"] = FilesystemProvider(root_path)
-
         if config["verbose"] >= 5:
             config_cleaned = util.purge_passwords(config)
             print(
@@ -387,9 +283,7 @@ class WebDAV(object):
         version = wsgi.Server.version
         version = f"WsgiDAV/{__version__} {version} Python {util.PYTHON_VERSION}"
         wsgi.Server.version = version
-
         info = self._get_common_info(config)
-
         if info["use_ssl"]:
             ssl_adapter = info["ssl_adapter"]
             ssl_adapter = server.get_ssl_adapter_class(ssl_adapter)
@@ -455,20 +349,16 @@ class WebDAV(object):
             _logger.exception("Could not import gevent (http://www.gevent.org).")
             _logger.error("Try `pip install gevent`.")
             return False
-
         gevent.monkey.patch_all()
-
         info = self._get_common_info(config)
         version = f"gevent/{gevent.__version__}"
         version = f"WsgiDAV/{__version__} {version} Python {util.PYTHON_VERSION}"
-
         server_args = {
             "wsgi_app": app,
             "bind_addr": (config["host"], config["port"]),
         }
         custom_args = util.get_dict_value(config, "server_args", as_dict=True)
         server_args.update(custom_args)
-
         if info["use_ssl"]:
             dav_server = WSGIServer(
                 server_args["bind_addr"],
@@ -479,7 +369,6 @@ class WebDAV(object):
             )
         else:
             dav_server = WSGIServer(server_args["bind_addr"], app)
-
         startup_event = config.get("startup_event")
         if startup_event:
             def _patched_start():
@@ -487,10 +376,8 @@ class WebDAV(object):
                 org_start()
                 _logger.info("gevent is ready")
                 startup_event.set()
-
             org_start = dav_server.start_accepting
             dav_server.start_accepting = _patched_start
-
         _logger.info(f"Running {version}")
         _logger.info(f"Serving on {info['url']} ...")
         try:
@@ -506,9 +393,7 @@ class WebDAV(object):
             _logger.exception("Could not import Gunicorn (https://gunicorn.org).")
             _logger.error("Try `pip install gunicorn` (UNIX only).")
             return False
-
         info = self._get_common_info(config)
-
         class GunicornApplication(gunicorn.app.base.BaseApplication):
             def __init__(self, app, options=None):
                 self.options = options or {}
@@ -526,7 +411,6 @@ class WebDAV(object):
 
             def load(self):
                 return self.application
-
         server_args = {
             "bind": "{}:{}".format(config["host"], config["port"]),
             "threads": 50,
@@ -546,7 +430,6 @@ class WebDAV(object):
         version = f"gunicorn/{gunicorn.__version__}"
         version = f"WsgiDAV/{__version__} {version} Python {util.PYTHON_VERSION}"
         _logger.info(f"Running {version} ...")
-
         GunicornApplication(app, server_args).run()
 
     def _run_paste(self, app, config, server):
@@ -558,9 +441,7 @@ class WebDAV(object):
             )
             _logger.error("Try `pip install paste`.")
             return False
-
         info = self._get_common_info(config)
-
         version = httpserver.WSGIHandler.server_version
         version = f"WsgiDAV/{__version__} {version} Python {util.PYTHON_VERSION}"
         server = httpserver.serve(
@@ -571,26 +452,21 @@ class WebDAV(object):
             protocol_version="HTTP/1.1",
             start_loop=False,
         )
-
         if config["verbose"] >= 5:
             __handle_one_request = server.RequestHandlerClass.handle_one_request
-
             def handle_one_request(self):
                 __handle_one_request(self)
                 if self.close_connection == 1:
                     _logger.debug("HTTP Connection : close")
                 else:
                     _logger.debug("HTTP Connection : continue")
-
             server.RequestHandlerClass.handle_one_request = handle_one_request
-
         _logger.info(f"Running {version} ...")
         host, port = server.server_address
         if host == "0.0.0.0":
             _logger.info(f"Serving on 0.0.0.0:{port} view at http://127.0.0.1:{port}")
         else:
             _logger.info(f"Serving on {info['url']}")
-
         try:
             server.serve_forever()
         except KeyboardInterrupt:
@@ -604,9 +480,7 @@ class WebDAV(object):
             _logger.exception("Could not import Uvicorn (https://www.uvicorn.org).")
             _logger.error("Try `pip install uvicorn`.")
             return False
-
         info = self._get_common_info(config)
-
         server_args = {
             "interface": "wsgi",
             "host": config["host"],
@@ -622,11 +496,9 @@ class WebDAV(object):
             )
         custom_args = util.get_dict_value(config, "server_args", as_dict=True)
         server_args.update(custom_args)
-
         version = f"uvicorn/{uvicorn.__version__}"
         version = f"WsgiDAV/{__version__} {version} Python {util.PYTHON_VERSION}"
         _logger.info(f"Running {version} ...")
-
         uvicorn.run(app, **server_args)
 
     def _run_wsgiref(self, app, config, _server):
@@ -658,11 +530,7 @@ class WebDAV(object):
             "wsgiref": self._run_wsgiref,
         }
         cli_opts, config = self._init_config()
-
         util.init_logging(config)
-
-        info = self._get_common_info(config)
-
         app = WsgiDAVApp(config)
 
         server = config["server"]
@@ -673,25 +541,7 @@ class WebDAV(object):
                     server, "', '".join(SUPPORTED_SERVERS.keys())
                 )
             )
-
-        if not use_lxml and config["verbose"] >= 3:
-            _logger.warning(
-                "Could not import lxml: using xml instead (up to 10% slower). "
-                "Consider `pip install lxml`(see https://pypi.python.org/pypi/lxml)."
-            )
-
-        if cli_opts["browse"]:
-            BROWSE_DELAY = 2.0
-
-            def _worker():
-                url = info["url"]
-                url = url.replace("0.0.0.0", "127.0.0.1")
-                _logger.info(f"Starting browser on {url} ...")
-                webbrowser.open(url)
-
-            Timer(BROWSE_DELAY, _worker).start()
-
-        handler(app, config, server)
+        handler(app=app, config=config, _server=server)
         return
 
 class MainWindow(QMainWindow):
@@ -766,6 +616,9 @@ class Ui_Server(object):
 
 def main():
     app = QApplication(sys.argv)
+    Translator = QTranslator()
+    Translator.load('qt_{}'.format(QLocale().system().name()), '{}/Lang'.format(os.getcwd()))
+    app.installTranslator(Translator)
     main_win = MainWindow()
     ui = Ui_Server()
     ui.setupUi(main_win)
