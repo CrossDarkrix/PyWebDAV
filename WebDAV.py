@@ -23,6 +23,7 @@ from PySide6.QtCore import (QByteArray, QMetaObject, QRect,
 from PySide6.QtGui import (QFont, QIcon,
                            QImage, QPixmap)
 from PySide6.QtWidgets import (QApplication, QLabel, QPushButton, QLineEdit, QMainWindow)
+from PySide6.QtNetwork import QHostInfo
 
 __docformat__ = "reStructuredText"
 DEFAULT_CONFIG_FILES = ("wsgidav.yaml", "wsgidav.json")
@@ -553,39 +554,57 @@ class MainWindow(QMainWindow):
 class Ui_Server(object):
     def setupUi(self, Server):
         if not Server.objectName():
-            Server.setObjectName(u"Server")
-        Server.resize(409, 313)
+            Server.setObjectName("Server")
+        Server.resize(409, 391)
         font = QFont()
-        font.setFamilies([u"Arial"])
+        font.setFamilies(["Arial"])
         Server.setFont(font)
-        Server.setStyleSheet(u"QWidget{background: #2d2d2d;color: #ededed;}")
+        Server.setStyleSheet("QWidget{background: #2d2d2d;color: #ededed;}")
         self.servLabel = QLabel(Server)
-        self.servLabel.setObjectName(u"servLabel")
+        self.servLabel.setObjectName("servLabel")
         self.servLabel.setGeometry(QRect(10, 20, 391, 91))
         font1 = QFont()
-        font1.setFamilies([u"Arial"])
+        font1.setFamilies(["Arial"])
         font1.setPointSize(30)
         self.servLabel.setFont(font1)
-        self.servLabel.setStyleSheet(u"QLabel{background: #2d2d2d;color: #ededed;}")
+        self.servLabel.setStyleSheet("QLabel{background: #2d2d2d;color: #ededed;}")
         self.servLabel.setAlignment(Qt.AlignCenter)
         self.server_button = QPushButton(Server)
-        self.server_button.setObjectName(u"server_buton")
-        self.server_button.setGeometry(QRect(10, 190, 391, 81))
+        self.server_button.setObjectName("server_buton")
+        self.server_button.setGeometry(QRect(10, 300, 391, 81))
         self.server_button.setFont(font1)
-        self.server_button.setStyleSheet(u"QPushButton{background: #2d2d2d;color: #ededed;border:1px solid #ededed;}\n"
+        self.server_button.setStyleSheet("QPushButton{background: #2d2d2d;color: #ededed;border:1px solid #ededed;}\n"
 "QPushButton:checked {color: White;background: Red;}")
         self.server_button.setText('サーバー起動')
         self.server_button.clicked.connect(self.ClickedEvent)
         self.server_button.setCheckable(True)
         self.server_button.setChecked(False)
         self.InputPath = QLineEdit(Server)
-        self.InputPath.setObjectName(u"InputPath")
-        self.InputPath.setGeometry(QRect(10, 140, 391, 51))
+        self.InputPath.setObjectName("InputPath")
+        self.InputPath.setGeometry(QRect(10, 240, 391, 51))
         font2 = QFont()
-        font2.setFamilies([u"Arial"])
-        font2.setPointSize(15)
+        font2.setFamilies(["Arial"])
+        font2.setPointSize(25)
         self.InputPath.setFont(font2)
-        self.InputPath.setStyleSheet(u"QLineEdit{color: White;background: #131519;border: 2px solid red;}")
+        self.InputPath.setStyleSheet("QLineEdit{color: White;background: #131519;border: 2px solid red;}")
+        self.iPAdress = QLabel(Server)
+        self.iPAdress.setObjectName("iPAdress")
+        self.iPAdress.setGeometry(QRect(160, 130, 241, 91))
+        font3 = QFont()
+        font3.setFamilies(["Arial"])
+        font3.setPointSize(17)
+        self.iPAdress.setFont(font3)
+        self.iPAdress.setStyleSheet("QLabel{background: #2d2d2d;color: #ededed;}")
+        self.iPAdress.setAlignment(Qt.AlignCenter)
+        self.iPAdress_Label = QLabel(Server)
+        self.iPAdress_Label.setObjectName("iPAdress_Label")
+        self.iPAdress_Label.setGeometry(QRect(10, 130, 171, 91))
+        font3 = QFont()
+        font3.setFamilies(["Arial"])
+        font3.setPointSize(23)
+        self.iPAdress_Label.setFont(font3)
+        self.iPAdress_Label.setStyleSheet("QLabel{background: #2d2d2d;color: #ededed;}")
+        self.iPAdress_Label.setAlignment(Qt.AlignCenter)
 
         self.retranslateUi(Server)
 
@@ -599,11 +618,13 @@ class Ui_Server(object):
 
     def StopServ(self):
         self.server_button.setText('サーバーを起動')
+        self.iPAdress.setText('---.---.---.---:8080')
         self.ServerProcess.terminate()
         self.ServerProcess.kill()
 
     def StartServ(self):
         self.server_button.setText('サーバーを停止')
+        self.iPAdress.setText('{}:8080'.format([ip.toString() for ip in QHostInfo().fromName(QHostInfo().localHostName()).addresses() if ip.toString().count('.') == 3][0]))
         self.ServerClass = WebDAV(running_path=self.InputPath.text().replace(os.sep, '/'))
         self.ServerProcess = multiprocessing.Process(target=self.ServerClass.run, daemon=True)
         self.ServerProcess.start()
@@ -613,6 +634,8 @@ class Ui_Server(object):
         self.servLabel.setText("簡易サーバーツール")
         self.InputPath.setToolTip("<html><head/><body><p>共有したいフォルダの場所を入力</p></body></html>")
         self.InputPath.setPlaceholderText("共有場所のパス")
+        self.iPAdress_Label.setText('iPアドレス:')
+        self.iPAdress.setText('---.---.---.---:8080')
 
 def main():
     app = QApplication(sys.argv)
