@@ -6,10 +6,10 @@
 <h2 align="center">PyWebDAV - wsgidavを使った簡易サーバー -</h2>
 
 <h4>指定したパスでフォルダ内を共有したい時にお使いください。ポート番号は「8080」に固定しています。</h4>
-<div align="center">
+<div align="center" style="h5{margin-top: 0px;}">
 <a href="https://github.com/CrossDarkrix/PyWebDAV">
 <img src="https://raw.githubusercontent.com/CrossDarkrix/PyWebDAV/main/image/Preview.png" width="320px" height="330px" alt="Preview">
-<h5 dir="auto" style="margin-top: 0px;">実際の動作画面</h5></a></div>
+<h5 style="margin-top: 0px;">実際の動作画面</h5></a></div>
 	<h2>Build Requirement Modules</h2>
 	<ul>
 		<li>PySide6</li><br>
